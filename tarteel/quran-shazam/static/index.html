@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tarteel — Discover the Quran</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0a1a12;
+            --bg-mid: #0f2618;
+            --bg-card: rgba(20, 50, 35, 0.8);
+            --bg-card-alt: rgba(12, 30, 20, 0.6);
+            --primary: #2dd4a0;
+            --primary-dim: rgba(45, 212, 160, 0.12);
+            --primary-border: rgba(45, 212, 160, 0.3);
+            --accent: #d4a72c;
+            --accent-dim: rgba(212, 167, 44, 0.15);
+            --accent-border: rgba(212, 167, 44, 0.35);
+            --text-arabic: #f0e6d0;
+            --text-body: #c4d4cc;
+            --text-bright: #e8f0ec;
+            --text-muted: #5a7a6a;
+            --text-dim: #3d5a4a;
+            --border: #1e3a2a;
+            --border-light: #2a4d38;
+            --red: #ef4444;
+            --green-match: #2dd4a0;
+            --yellow-match: #d4a72c;
+            --orange-match: #e8923a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(165deg, var(--bg-deep) 0%, var(--bg-mid) 40%, #0a2015 70%, var(--bg-deep) 100%);
+            color: var(--text-body);
+            min-height: 100vh;
+        }
+
+        /* ── Hero Section ──────────────────── */
+        .hero {
+            position: relative;
+            text-align: center;
+            padding: 4rem 1.5rem 3.5rem;
+            overflow: hidden;
+            min-height: 340px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* Islamic geometric pattern backdrop */
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='%23d4a72c' stroke-width='0.6'%3E%3Cpolygon points='50,5 58.09,27.45 80,20 72.55,42.45 95,50 72.55,57.55 80,80 58.09,72.55 50,95 41.91,72.55 20,80 27.45,57.55 5,50 27.45,42.45 20,20 41.91,27.45' opacity='0.35'/%3E%3Cpolygon points='50,20 62,30 66,46 62,62 50,72 38,62 34,46 38,30' opacity='0.25'/%3E%3Ccircle cx='50' cy='46' r='10' opacity='0.2'/%3E%3Cline x1='0' y1='0' x2='20' y2='20' opacity='0.2'/%3E%3Cline x1='100' y1='0' x2='80' y2='20' opacity='0.2'/%3E%3Cline x1='0' y1='100' x2='20' y2='80' opacity='0.2'/%3E%3Cline x1='100' y1='100' x2='80' y2='80' opacity='0.2'/%3E%3Cline x1='50' y1='0' x2='50' y2='5' opacity='0.15'/%3E%3Cline x1='50' y1='95' x2='50' y2='100' opacity='0.15'/%3E%3Cline x1='0' y1='50' x2='5' y2='50' opacity='0.15'/%3E%3Cline x1='95' y1='50' x2='100' y2='50' opacity='0.15'/%3E%3C/g%3E%3C/svg%3E");
+            background-repeat: repeat;
+            background-size: 100px 100px;
+            opacity: 0.7;
+            pointer-events: none;
+            mask-image: radial-gradient(ellipse at 50% 50%, black 0%, black 50%, transparent 85%);
+            -webkit-mask-image: radial-gradient(ellipse at 50% 50%, black 0%, black 50%, transparent 85%);
+        }
+        /* Emerald/gold glow overlay */
+        .hero::after {
+            content: '';
+            position: absolute;
+            top: -40%; left: -20%; width: 140%; height: 180%;
+            background: radial-gradient(ellipse at 50% 40%, rgba(45, 212, 160, 0.07) 0%, transparent 55%),
+                        radial-gradient(ellipse at 50% 70%, rgba(212, 167, 44, 0.05) 0%, transparent 45%);
+            pointer-events: none;
+        }
+        .hero-content { position: relative; z-index: 1; }
+        .hero-ornament {
+            font-family: 'Amiri', serif;
+            font-size: 1.2rem;
+            color: var(--accent);
+            opacity: 0.5;
+            margin-bottom: 1rem;
+            letter-spacing: 0.5em;
+        }
+        .hero h1 {
+            font-family: 'Inter', sans-serif;
+            font-size: 2.8rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            background: linear-gradient(135deg, var(--accent) 0%, #e8d48b 50%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.75rem;
+        }
+        .hero-subtitle {
+            font-size: 1.05rem;
+            color: var(--text-muted);
+            font-weight: 300;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+        .hero-bismillah {
+            font-family: 'Amiri', serif;
+            font-size: 1.8rem;
+            color: var(--text-arabic);
+            opacity: 0.6;
+            margin-bottom: 0.5rem;
+        }
+        .hero-bismillah-meaning {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            font-style: italic;
+        }
+        .hero-arch {
+            position: absolute;
+            bottom: -1px; left: 0; width: 100%; height: 40px;
+            z-index: 2;
+        }
+
+        /* ── Main Content ──────────────────── */
+        .container {
+            max-width: 600px; width: 100%; margin: 0 auto;
+            padding: 0 1.5rem 2rem;
+        }
+
+        /* ── Record & Upload ────────────────── */
+        .record-section {
+            display: flex; flex-direction: column; align-items: center;
+            gap: 1rem; margin-bottom: 2rem; padding-top: 0.5rem;
+        }
+        #recordBtn {
+            width: 110px; height: 110px; border-radius: 50%;
+            border: 3px solid var(--primary); background: var(--primary-dim);
+            color: var(--primary); font-size: 2.5rem; cursor: pointer;
+            transition: all 0.3s; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 30px rgba(45, 212, 160, 0.08);
+        }
+        #recordBtn:hover {
+            background: rgba(45, 212, 160, 0.18);
+            transform: scale(1.05);
+            box-shadow: 0 0 40px rgba(45, 212, 160, 0.15);
+        }
+        #recordBtn.recording {
+            border-color: var(--red); background: rgba(239, 68, 68, 0.15);
+            animation: pulse 1.5s infinite;
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.1);
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3); }
+            50% { box-shadow: 0 0 0 18px rgba(239, 68, 68, 0); }
+        }
+        .status { color: var(--text-muted); font-size: 0.9rem; min-height: 1.5rem; }
+
+        .divider {
+            display: flex; align-items: center; gap: 1rem;
+            margin: 1.5rem 0; color: var(--text-dim); font-size: 0.85rem;
+        }
+        .divider::before, .divider::after { content: ''; flex: 1; border-top: 1px solid var(--border); }
+
+        .upload-area {
+            border: 2px dashed var(--border); border-radius: 12px; padding: 1.5rem;
+            text-align: center; cursor: pointer; transition: all 0.3s;
+        }
+        .upload-area:hover { border-color: var(--primary); background: var(--primary-dim); }
+        .upload-area input { display: none; }
+        .upload-area p:first-of-type { color: var(--text-body); }
+        .upload-area p:last-of-type { font-size: 0.8rem; color: var(--text-dim); margin-top: 0.5rem; }
+
+        /* ── Loading States ─────────────────── */
+        .loading { display: none; text-align: center; margin: 2rem 0; }
+        .loading.show { display: block; }
+        .loading p { color: var(--text-muted); }
+        .wave-container {
+            display: flex; align-items: center; justify-content: center;
+            gap: 4px; height: 40px; margin-bottom: 1rem;
+        }
+        .wave-bar {
+            width: 4px; background: var(--primary); border-radius: 2px;
+            animation: wave 1.2s ease-in-out infinite;
+        }
+        .wave-bar:nth-child(1) { height: 12px; animation-delay: 0s; }
+        .wave-bar:nth-child(2) { height: 20px; animation-delay: 0.1s; }
+        .wave-bar:nth-child(3) { height: 28px; animation-delay: 0.2s; }
+        .wave-bar:nth-child(4) { height: 20px; animation-delay: 0.3s; }
+        .wave-bar:nth-child(5) { height: 12px; animation-delay: 0.4s; }
+        @keyframes wave {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(1.8); }
+        }
+
+        /* ── Results: Cascading Reveal ──────── */
+        .results { margin-top: 2rem; display: none; }
+        .results.show { display: block; }
+
+        .reveal-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 16px; padding: 2rem; margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+        .reveal-card.best { border-color: var(--primary-border); }
+
+        .cascade { opacity: 0; transform: translateY(12px); transition: all 0.6s ease-out; }
+        .cascade.visible { opacity: 1; transform: translateY(0); }
+
+        .match-label {
+            font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.15em;
+            margin-bottom: 1.2rem; font-weight: 500;
+        }
+        .match-label.strong { color: var(--green-match); }
+        .match-label.close { color: var(--yellow-match); }
+        .match-label.guess { color: var(--orange-match); }
+
+        .result-translation {
+            font-size: 1.25rem; line-height: 1.7; color: var(--text-bright);
+            margin-bottom: 1.5rem; font-weight: 300;
+        }
+
+        .result-arabic {
+            font-family: 'Amiri', 'Traditional Arabic', serif;
+            font-size: 1.7rem; line-height: 2.4; text-align: right; direction: rtl;
+            color: var(--text-arabic); margin-bottom: 1rem; padding: 0.5rem 0;
+        }
+
+        .result-transliteration {
+            font-size: 0.95rem; color: var(--accent); font-style: italic;
+            margin-bottom: 1.5rem; line-height: 1.6; opacity: 0.85;
+        }
+
+        .result-context {
+            font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;
+        }
+        .result-context .surah-name { color: var(--primary); font-weight: 500; }
+        .result-context .surah-meaning { color: var(--text-body); }
+
+        .explore-btn {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            background: var(--primary-dim); border: 1px solid var(--primary-border);
+            color: var(--primary); padding: 0.7rem 1.2rem; border-radius: 10px;
+            cursor: pointer; font-size: 0.9rem; font-weight: 500;
+            transition: all 0.3s; font-family: inherit;
+        }
+        .explore-btn:hover { background: rgba(45, 212, 160, 0.2); transform: translateY(-1px); }
+        .explore-btn .arrow { transition: transform 0.3s; }
+        .explore-btn.open .arrow { transform: rotate(90deg); }
+
+        /* ── Explore Panel ──────────────────── */
+        .explore-panel {
+            max-height: 0; overflow: hidden; transition: max-height 0.5s ease-out;
+            margin-top: 0;
+        }
+        .explore-panel.open { max-height: 2000px; margin-top: 1.5rem; }
+
+        .explore-section {
+            padding: 1rem 0; border-top: 1px solid var(--border);
+        }
+        .explore-section:first-child { border-top: none; }
+        .explore-section-title {
+            font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em;
+            color: var(--accent); margin-bottom: 0.75rem; font-weight: 600;
+        }
+        .explore-section-text {
+            font-size: 0.9rem; color: var(--text-body); line-height: 1.7;
+        }
+
+        .context-verse {
+            padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 0.5rem;
+            transition: all 0.3s;
+        }
+        .context-verse.dimmed { opacity: 0.4; }
+        .context-verse.highlighted {
+            background: var(--primary-dim);
+            border-left: 3px solid var(--primary);
+            opacity: 1;
+        }
+        .context-verse .verse-num {
+            font-size: 0.7rem; color: var(--text-dim); margin-bottom: 0.3rem;
+        }
+        .context-verse .verse-arabic {
+            font-family: 'Amiri', serif; font-size: 1.2rem;
+            direction: rtl; text-align: right; color: var(--text-arabic); line-height: 2;
+        }
+        .context-verse .verse-translation {
+            font-size: 0.8rem; color: var(--text-muted); font-style: italic; margin-top: 0.3rem;
+        }
+
+        .tafsir-section { padding: 1rem 0; border-top: 1px solid var(--border); }
+        .tafsir-label {
+            font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em;
+            color: var(--accent); margin-bottom: 0.5rem; font-weight: 600;
+        }
+        .tafsir-text { font-size: 0.85rem; color: var(--text-body); line-height: 1.7; }
+
+        .listen-btn {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            background: var(--accent-dim); border: 1px solid var(--accent-border);
+            color: var(--accent); padding: 0.4rem 0.8rem; border-radius: 8px;
+            cursor: pointer; font-size: 0.8rem; transition: all 0.2s; font-family: inherit;
+            margin-top: 0.75rem;
+        }
+        .listen-btn:hover { background: rgba(212, 167, 44, 0.25); }
+
+        /* ── Other Matches ──────────────────── */
+        .other-matches { margin-top: 1rem; }
+        .other-matches-toggle {
+            background: none; border: none; color: var(--text-dim); cursor: pointer;
+            font-size: 0.85rem; padding: 0.5rem 0; font-family: inherit;
+            transition: color 0.2s;
+        }
+        .other-matches-toggle:hover { color: var(--text-muted); }
+        .other-matches-list { display: none; margin-top: 0.75rem; }
+        .other-matches-list.show { display: block; }
+        .other-match-card {
+            background: var(--bg-card-alt); border: 1px solid var(--border);
+            border-radius: 10px; padding: 1rem; margin-bottom: 0.5rem;
+        }
+        .other-match-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .other-match-surah { font-size: 0.8rem; color: var(--primary); }
+        .other-match-arabic {
+            font-family: 'Amiri', serif; font-size: 1.1rem;
+            direction: rtl; text-align: right; color: var(--text-arabic); line-height: 1.8;
+        }
+        .other-match-translation {
+            font-size: 0.8rem; color: var(--text-dim); font-style: italic; margin-top: 0.3rem;
+        }
+
+        /* ── Transcription Box ──────────────── */
+        .transcription-box {
+            background: var(--bg-card-alt); border: 1px solid var(--border);
+            border-radius: 8px; padding: 1rem; margin-bottom: 1rem;
+        }
+        .transcription-box label {
+            font-size: 0.75rem; text-transform: uppercase;
+            letter-spacing: 0.1em; color: var(--text-dim);
+        }
+        .transcription-box .text {
+            font-family: 'Amiri', serif; font-size: 1.2rem;
+            direction: rtl; text-align: right; color: var(--accent); margin-top: 0.5rem;
+        }
+        .meta { font-size: 0.8rem; color: var(--text-dim); text-align: center; margin-top: 0.5rem; }
+
+        /* ── Try Again ──────────────────────── */
+        .try-again { text-align: center; margin-top: 1.5rem; }
+        .try-again-btn {
+            background: var(--primary-dim); border: 1px solid var(--primary-border);
+            color: var(--primary); padding: 0.7rem 1.5rem; border-radius: 10px;
+            cursor: pointer; font-size: 0.9rem; font-family: inherit;
+            transition: all 0.3s;
+        }
+        .try-again-btn:hover { background: rgba(45, 212, 160, 0.2); }
+
+        /* ── Footer ─────────────────────────── */
+        .telegram-link {
+            text-align: center; margin-top: 2.5rem; padding: 1rem;
+            background: var(--bg-card-alt); border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        .telegram-link p:first-child { color: var(--text-muted); font-size: 0.9rem; }
+        .telegram-link a {
+            color: var(--primary); text-decoration: none; font-weight: 600;
+        }
+        .telegram-link a:hover { text-decoration: underline; }
+        .footer {
+            text-align: center; margin-top: 1.5rem; padding: 1rem 0 2rem;
+            font-size: 0.75rem; color: var(--text-dim);
+        }
+
+        /* ── Multi-Ayah Badge ───────────────── */
+        .multi-ayah-badge {
+            background: var(--accent-dim); color: var(--accent);
+            padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem;
+            margin-left: 0.5rem;
+        }
+
+        /* ── Geometric ornament ─────────────── */
+        .geo-divider {
+            display: flex; align-items: center; justify-content: center;
+            gap: 0.75rem; margin: 2rem 0 1rem; color: var(--text-dim);
+        }
+        .geo-divider::before, .geo-divider::after {
+            content: ''; flex: 1; max-width: 80px;
+            border-top: 1px solid var(--border);
+        }
+        .geo-diamond {
+            width: 8px; height: 8px; border: 1px solid var(--accent);
+            transform: rotate(45deg); opacity: 0.4;
+        }
+    </style>
+</head>
+<body>
+    <!-- ── Hero Section ──────────────────── -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-ornament">&#9753; &#9753; &#9753;</div>
+            <h1>Tarteel</h1>
+            <p class="hero-subtitle">Hear something beautiful?<br>Discover what it means.</p>
+            <div class="hero-bismillah">&#xFDFD;</div>
+            <p class="hero-bismillah-meaning">In the name of God, the Most Gracious, the Most Merciful</p>
+        </div>
+        <!-- Arch border at bottom of hero -->
+        <svg class="hero-arch" viewBox="0 0 600 40" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0,40 L0,20 Q150,0 300,0 Q450,0 600,20 L600,40 Z" fill="var(--bg-deep)" opacity="0.6"/>
+            <path d="M0,20 Q150,0 300,0 Q450,0 600,20" fill="none" stroke="var(--accent)" stroke-width="0.8" opacity="0.2"/>
+        </svg>
+    </section>
+
+    <!-- ── Main Content ──────────────────── -->
+    <div class="container">
+
+        <div class="geo-divider"><div class="geo-diamond"></div></div>
+
+        <div class="record-section">
+            <button id="recordBtn" onclick="toggleRecord()">&#127908;</button>
+            <div class="status" id="status">Tap to start recording</div>
+        </div>
+
+        <div class="divider">or upload audio</div>
+
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+            <input type="file" id="fileInput" accept="audio/*" onchange="handleFile(this.files[0])">
+            <p>Click to upload audio file</p>
+            <p>MP3, WAV, OGG, M4A, WebM</p>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="wave-container">
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+            </div>
+            <p id="loadingText">Listening...</p>
+        </div>
+
+        <div class="results" id="results"></div>
+
+        <div class="telegram-link" id="telegramLink">
+            <p>Also available as a Telegram bot</p>
+            <p style="margin-top: 0.5rem;"><a href="https://t.me/kfamquran_shazam_bot" target="_blank">@kfamquran_shazam_bot</a></p>
+        </div>
+
+        <div class="footer">
+            <p>Powered by Tarteel AI + AlQuran Cloud</p>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder, chunks = [], recording = false;
+        let currentAudio = null;
+
+        async function toggleRecord() {
+            if (recording) { stopRecording(); return; }
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                chunks = [];
+                mediaRecorder.ondataavailable = e => chunks.push(e.data);
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: 'audio/webm' });
+                    stream.getTracks().forEach(t => t.stop());
+                    identify(blob);
+                };
+                mediaRecorder.start();
+                recording = true;
+                document.getElementById('recordBtn').classList.add('recording');
+                document.getElementById('recordBtn').textContent = '\u23F9';
+                document.getElementById('status').textContent = 'Recording... tap to stop';
+            } catch(e) {
+                document.getElementById('status').textContent = 'Mic access denied';
+            }
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            recording = false;
+            document.getElementById('recordBtn').classList.remove('recording');
+            document.getElementById('recordBtn').textContent = '\u{1F3A4}';
+            document.getElementById('status').textContent = 'Processing...';
+        }
+
+        function handleFile(file) {
+            if (!file) return;
+            document.getElementById('status').textContent = `Uploaded: ${file.name}`;
+            identify(file);
+        }
+
+        function matchLabel(score) {
+            if (score >= 0.8) return { text: 'Strong match', cls: 'strong' };
+            if (score >= 0.55) return { text: 'Close match', cls: 'close' };
+            return { text: 'Best guess', cls: 'guess' };
+        }
+
+        function playAyah(surah, ayah) {
+            if (currentAudio) { currentAudio.pause(); }
+            const padSurah = String(surah).padStart(3, '0');
+            const padAyah = String(ayah).padStart(3, '0');
+            const url = `https://everyayah.com/data/Alafasy_128kbps/${padSurah}${padAyah}.mp3`;
+            currentAudio = new Audio(url);
+            currentAudio.play();
+        }
+
+        function toggleExplore(btn, panelId) {
+            const panel = document.getElementById(panelId);
+            btn.classList.toggle('open');
+            panel.classList.toggle('open');
+        }
+
+        function toggleOtherMatches(btn) {
+            const list = btn.nextElementSibling;
+            list.classList.toggle('show');
+            btn.textContent = list.classList.contains('show')
+                ? 'Hide other possibilities'
+                : 'Other possibilities';
+        }
+
+        function cascadeReveal(cardEl) {
+            const items = cardEl.querySelectorAll('.cascade');
+            items.forEach((el, i) => {
+                setTimeout(() => el.classList.add('visible'), 300 * (i + 1));
+            });
+        }
+
+        async function fetchContext(surah, ayah, panelId) {
+            const panel = document.getElementById(panelId);
+            if (panel.dataset.loaded) return;
+            panel.dataset.loaded = 'true';
+
+            try {
+                const resp = await fetch(`/verse/${surah}/${ayah}/context`);
+                if (!resp.ok) return;
+                const data = await resp.json();
+
+                let html = '';
+
+                if (data.surah_info && data.surah_info.intro) {
+                    html += `
+                        <div class="explore-section">
+                            <div class="explore-section-title">About this Surah</div>
+                            <div class="explore-section-text">${data.surah_info.intro}</div>
+                        </div>`;
+                }
+
+                const allVerses = [...(data.before || []), data.verse, ...(data.after || [])];
+                if (allVerses.length > 1) {
+                    html += `<div class="explore-section">
+                        <div class="explore-section-title">In Context</div>`;
+                    allVerses.forEach(v => {
+                        if (!v) return;
+                        const isCurrent = v.surah === surah && v.ayah === ayah;
+                        html += `
+                            <div class="context-verse ${isCurrent ? 'highlighted' : 'dimmed'}">
+                                <div class="verse-num">${v.surah}:${v.ayah}</div>
+                                <div class="verse-arabic">${v.text}</div>
+                                <div class="verse-translation">${v.translation}</div>
+                            </div>`;
+                    });
+                    html += `</div>`;
+                }
+
+                if (data.verse && data.verse.tafsir) {
+                    html += `
+                        <div class="tafsir-section">
+                            <div class="tafsir-label">Scholarly Commentary (Ibn Kathir)</div>
+                            <div class="tafsir-text">${data.verse.tafsir}</div>
+                        </div>`;
+                }
+
+                panel.innerHTML = html;
+            } catch(e) {
+                panel.innerHTML = '<p style="color:var(--text-dim);font-size:0.85rem;">Could not load context.</p>';
+            }
+        }
+
+        async function identify(audioBlob) {
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            loading.classList.add('show');
+            results.classList.remove('show');
+            document.getElementById('loadingText').textContent = 'Listening...';
+
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.webm');
+
+            setTimeout(() => {
+                document.getElementById('loadingText').textContent = 'Finding your verse...';
+            }, 1500);
+
+            try {
+                const resp = await fetch('/identify', { method: 'POST', body: formData });
+                const data = await resp.json();
+                loading.classList.remove('show');
+
+                if (data.error) {
+                    results.innerHTML = `<div class="reveal-card"><p style="color:var(--text-muted);">${data.error}</p></div>`;
+                    results.classList.add('show');
+                    return;
+                }
+
+                let html = '';
+
+                html += `
+                    <div class="transcription-box">
+                        <label>What we heard</label>
+                        <div class="text">${data.transcription}</div>
+                    </div>
+                    <div class="meta">Processed in ${data.elapsed.toFixed(1)}s</div>`;
+
+                if (data.multi_ayah && data.multi_ayah.length > 0) {
+                    html += `<div class="reveal-card best">
+                        <div style="display:flex;align-items:center;margin-bottom:1rem;">
+                            <span class="result-context">
+                                <span class="surah-name">${data.multi_ayah[0].surah_english}</span>
+                                <span class="surah-meaning"> — Verses ${data.multi_ayah[0].ayah}-${data.multi_ayah[data.multi_ayah.length-1].ayah}</span>
+                            </span>
+                            <span class="multi-ayah-badge">Multi-Verse</span>
+                        </div>`;
+                    data.multi_ayah.forEach(m => {
+                        html += `
+                            <div style="margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border);">
+                                <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:0.3rem;">${m.surah}:${m.ayah}</div>
+                                <div class="result-arabic">${m.text}</div>
+                                <div class="result-translation" style="font-size:1rem;">${m.translation}</div>
+                            </div>`;
+                    });
+                    html += `</div>`;
+                }
+
+                if (data.matches && data.matches.length > 0) {
+                    const best = data.matches[0];
+                    const label = matchLabel(best.score);
+                    const panelId = `explore-0`;
+
+                    html += `
+                        <div class="reveal-card best" id="bestCard">
+                            <div class="cascade match-label ${label.cls}">${label.text}</div>
+                            <div class="cascade result-translation">"${best.translation}"</div>
+                            <div class="cascade result-arabic">${best.text}</div>
+                            ${best.transliteration ? `<div class="cascade result-transliteration">${best.transliteration}</div>` : ''}
+                            <div class="cascade result-context">
+                                From <span class="surah-name">${best.surah_english}</span>
+                                <span class="surah-meaning">(${best.surah_meaning})</span>
+                                — Verse ${best.ayah}
+                            </div>
+                            <div class="cascade">
+                                <button class="explore-btn" onclick="toggleExplore(this, '${panelId}'); fetchContext(${best.surah}, ${best.ayah}, '${panelId}');">
+                                    Explore this verse <span class="arrow">&#9654;</span>
+                                </button>
+                                <button class="listen-btn" onclick="playAyah(${best.surah}, ${best.ayah})">&#9654;&#65039; Listen (Alafasy)</button>
+                            </div>
+                            <div class="explore-panel" id="${panelId}">
+                                <p style="color:var(--text-dim);font-size:0.85rem;">Loading...</p>
+                            </div>
+                        </div>`;
+
+                    if (data.matches.length > 1) {
+                        html += `<div class="other-matches">
+                            <button class="other-matches-toggle" onclick="toggleOtherMatches(this)">Other possibilities</button>
+                            <div class="other-matches-list">`;
+                        data.matches.slice(1).forEach(m => {
+                            const l = matchLabel(m.score);
+                            html += `
+                                <div class="other-match-card">
+                                    <div class="other-match-header">
+                                        <span class="other-match-surah">${m.surah_english} — ${m.surah}:${m.ayah}</span>
+                                        <span class="match-label ${l.cls}" style="font-size:0.7rem;">${l.text}</span>
+                                    </div>
+                                    <div class="other-match-arabic">${m.text}</div>
+                                    <div class="other-match-translation">"${m.translation}"</div>
+                                </div>`;
+                        });
+                        html += `</div></div>`;
+                    }
+                }
+
+                html += `
+                    <div class="try-again">
+                        <button class="try-again-btn" onclick="document.getElementById('results').classList.remove('show'); document.getElementById('status').textContent='Tap to start recording';">
+                            Try another verse
+                        </button>
+                    </div>`;
+
+                results.innerHTML = html;
+                results.classList.add('show');
+                document.getElementById('status').textContent = 'Tap to record again';
+
+                const bestCard = document.getElementById('bestCard');
+                if (bestCard) cascadeReveal(bestCard);
+
+            } catch(e) {
+                loading.classList.remove('show');
+                results.innerHTML = `<div class="reveal-card"><p style="color:var(--text-muted);">Something went wrong. Please try again.</p></div>`;
+                results.classList.add('show');
+            }
+        }
+    </script>
+</body>
+</html>

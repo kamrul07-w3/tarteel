@@ -1,0 +1,142 @@
+{
+  "1": {
+    "name": "Al-Faatiha",
+    "meaning": "The Opening",
+    "intro": "Al-Faatiha is the first chapter of the Quran and is recited in every unit of prayer. Known as 'The Mother of the Book,' it is a concise prayer that captures the essence of the entire Quran — praising God, seeking guidance, and asking for the straight path.",
+    "revelation": "Makkah",
+    "verse_count": 7
+  },
+  "2": {
+    "name": "Al-Baqarah",
+    "meaning": "The Cow",
+    "intro": "The longest chapter in the Quran, Al-Baqarah covers themes of faith, law, and community. It addresses believers, non-believers, and those in between, establishing foundational guidance for social, economic, and spiritual life.",
+    "revelation": "Madinah",
+    "verse_count": 286
+  },
+  "3": {
+    "name": "Aal-E-Imran",
+    "meaning": "The Family of Imran",
+    "intro": "This chapter discusses the family of Imran, including Mary and Jesus, emphasizing faith and steadfastness. It was revealed during a time of theological dialogue between Muslims and Christians, addressing shared and divergent beliefs.",
+    "revelation": "Madinah",
+    "verse_count": 200
+  },
+  "12": {
+    "name": "Yusuf",
+    "meaning": "Joseph",
+    "intro": "Called 'the most beautiful of stories,' Surah Yusuf narrates the life of Prophet Joseph — from betrayal by his brothers to becoming a leader in Egypt. It is a story of patience, forgiveness, and trusting in God's plan through hardship.",
+    "revelation": "Makkah",
+    "verse_count": 111
+  },
+  "18": {
+    "name": "Al-Kahf",
+    "meaning": "The Cave",
+    "intro": "Surah Al-Kahf tells four remarkable stories — the Sleepers of the Cave, the owner of two gardens, Moses and Al-Khidr, and Dhul-Qarnayn. Muslims traditionally recite it on Fridays. Its central themes are faith tested by trials, wealth, knowledge, and power.",
+    "revelation": "Makkah",
+    "verse_count": 110
+  },
+  "19": {
+    "name": "Maryam",
+    "meaning": "Mary",
+    "intro": "Named after Mary, the mother of Jesus, this chapter celebrates miraculous births and God's mercy. It tells the stories of Zachariah, John, Mary, Jesus, Abraham, and other prophets, emphasizing God's compassion toward His servants.",
+    "revelation": "Makkah",
+    "verse_count": 98
+  },
+  "36": {
+    "name": "Ya-Sin",
+    "meaning": "Ya-Sin",
+    "intro": "Often called 'the heart of the Quran,' Ya-Sin addresses the fundamentals of faith: God's oneness, the truth of revelation, and the reality of resurrection. It is frequently recited for the dying and at funerals, offering comfort and hope.",
+    "revelation": "Makkah",
+    "verse_count": 83
+  },
+  "55": {
+    "name": "Ar-Rahman",
+    "meaning": "The Most Merciful",
+    "intro": "Known as 'the Beauty of the Quran,' Ar-Rahman is a hymn of gratitude listing God's countless gifts to creation. Its recurring refrain — 'Which of the favours of your Lord will you deny?' — is repeated 31 times, like a chorus of wonder.",
+    "revelation": "Madinah",
+    "verse_count": 78
+  },
+  "56": {
+    "name": "Al-Waqiah",
+    "meaning": "The Inevitable Event",
+    "intro": "This chapter describes the Day of Judgment and divides humanity into three groups based on their deeds. The Prophet Muhammad said that whoever recites it every night will never be afflicted by poverty. It is a powerful reminder of accountability.",
+    "revelation": "Makkah",
+    "verse_count": 96
+  },
+  "67": {
+    "name": "Al-Mulk",
+    "meaning": "The Sovereignty",
+    "intro": "Al-Mulk reflects on God's absolute sovereignty over creation. It invites contemplation of the heavens, the earth, and one's own mortality. The Prophet encouraged reciting it nightly, calling it a protector and intercessor.",
+    "revelation": "Makkah",
+    "verse_count": 30
+  },
+  "72": {
+    "name": "Al-Jinn",
+    "meaning": "The Jinn",
+    "intro": "This chapter recounts how a group of jinn listened to the Quran and were moved to believe. It explores the unseen world and affirms that God's message reaches all of creation, not just humankind.",
+    "revelation": "Makkah",
+    "verse_count": 28
+  },
+  "78": {
+    "name": "An-Naba",
+    "meaning": "The Great News",
+    "intro": "An-Naba opens the final section of the Quran with a dramatic question about the Day of Resurrection. It describes signs in nature — mountains, the night sky, rain — as evidence of God's power to raise the dead.",
+    "revelation": "Makkah",
+    "verse_count": 40
+  },
+  "87": {
+    "name": "Al-Ala",
+    "meaning": "The Most High",
+    "intro": "A short, powerful chapter that glorifies God and speaks of spiritual purification. The Prophet regularly recited it in Friday prayers. It reminds that success comes from remembering God and preferring the eternal over the temporary.",
+    "revelation": "Makkah",
+    "verse_count": 19
+  },
+  "93": {
+    "name": "Ad-Duhaa",
+    "meaning": "The Morning Brightness",
+    "intro": "Revealed during a period when the Prophet felt abandoned because revelation had paused, this chapter is a tender reassurance from God: 'Your Lord has not forsaken you.' It is a message of hope for anyone going through difficulty.",
+    "revelation": "Makkah",
+    "verse_count": 11
+  },
+  "94": {
+    "name": "Ash-Sharh",
+    "meaning": "The Relief",
+    "intro": "A companion to Ad-Duhaa, this brief chapter promises that with every hardship comes ease — repeated twice for emphasis. It celebrates the expansion of the heart through faith and the lifting of burdens.",
+    "revelation": "Makkah",
+    "verse_count": 8
+  },
+  "112": {
+    "name": "Al-Ikhlas",
+    "meaning": "Sincerity / Purity of Faith",
+    "intro": "Just four verses long, Al-Ikhlas is considered equivalent to one-third of the Quran in meaning. It is the purest declaration of monotheism — God is One, eternal, and incomparable. Muslims recite it frequently in prayer and daily life.",
+    "revelation": "Makkah",
+    "verse_count": 4
+  },
+  "113": {
+    "name": "Al-Falaq",
+    "meaning": "The Daybreak",
+    "intro": "One of the two 'protective chapters,' Al-Falaq is a prayer seeking refuge in God from external harms — darkness, envy, and evil. The Prophet would recite it along with An-Nas before sleep for protection.",
+    "revelation": "Makkah",
+    "verse_count": 5
+  },
+  "114": {
+    "name": "An-Nas",
+    "meaning": "Mankind",
+    "intro": "The final chapter of the Quran, An-Nas is a prayer seeking refuge from internal harm — the whispering of doubt and temptation. Together with Al-Falaq, it forms a pair of protective prayers that bookend the Quran's closing.",
+    "revelation": "Makkah",
+    "verse_count": 6
+  },
+  "4": {
+    "name": "An-Nisa",
+    "meaning": "The Women",
+    "intro": "An-Nisa addresses issues of justice, particularly regarding women, orphans, and family law. Revealed in Madinah, it establishes principles of inheritance, marriage, and social responsibility that were revolutionary for their time.",
+    "revelation": "Madinah",
+    "verse_count": 176
+  },
+  "24": {
+    "name": "An-Nur",
+    "meaning": "The Light",
+    "intro": "Surah An-Nur contains the famous 'Verse of Light,' one of the most mystical passages in the Quran. It also establishes social ethics around privacy, modesty, and community conduct, blending the spiritual with the practical.",
+    "revelation": "Madinah",
+    "verse_count": 64
+  }
+}
