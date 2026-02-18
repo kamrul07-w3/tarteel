@@ -1,446 +1,176 @@
 #!/usr/bin/env python3
 """
-🔊 Quran Shazam — Identify any Quran recitation
-Send audio → Get surah, ayah, Arabic text, translation + tafsir
-v2: ONNX acceleration, multi-ayah detection, n-gram index, tafsir
+Tarteel — Discover the Quran through recitation.
+Batch identify + real-time streaming transcription.
 """
-import json
-import re
 import os
+import json
 import time
+import asyncio
 import tempfile
-import hashlib
-from collections import defaultdict
-from difflib import SequenceMatcher
-from fastapi import FastAPI, UploadFile, File, HTTPException
+
+from fastapi import FastAPI, UploadFile, File, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-import httpx
 
-# ── Config ──────────────────────────────────────────
-MODEL_NAME = "tarteel-ai/whisper-base-ar-quran"
-CORPUS_PATH = os.path.join(os.path.dirname(__file__), "corpus.json")
-ENRICHED_CORPUS_PATH = os.path.join(os.path.dirname(__file__), "data", "enriched_corpus.json")
-SURAH_INTROS_PATH = os.path.join(os.path.dirname(__file__), "data", "surah_intros.json")
+from core import create_engine, format_match, format_multi_ayah
+
+# ── Init ────────────────────────────────────────────
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
-ONNX_PATH = os.path.join(os.path.dirname(__file__), "onnx_model")
-TOP_K = 5
-USE_ONNX = True  # 2-3x faster inference on CPU
-
-# ── Arabic text normalization ───────────────────────
-def strip_diacritics(text):
-    diacritics = re.compile(r'[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E4\u06E7\u06E8\u06EA-\u06ED]')
-    return diacritics.sub('', text)
-
-def normalize_arabic(text):
-    text = strip_diacritics(text)
-    text = re.sub(r'[\u06D6-\u06FF\uFD3E\uFD3F\uFDFC\uFDFD\uFE70-\uFEFF\u06DE\u06E9]', '', text)
-    text = re.sub(r'[۞۩﴾﴿٭]', '', text)
-    text = re.sub('[إأآٱا]', 'ا', text)
-    text = text.replace('ة', 'ه')
-    text = text.replace('ى', 'ي')
-    text = text.replace('\u0640', '')
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text
-
-# ── Bismillah handling ─────────────────────────────
-BISMILLAH_NORM = normalize_arabic("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ")
-
-def strip_bismillah(text):
-    """Strip Bismillah prefix from normalized text if present"""
-    if text.startswith(BISMILLAH_NORM):
-        stripped = text[len(BISMILLAH_NORM):].strip()
-        return stripped if stripped else text
-    return text
-
-# ── N-gram index for fast candidate filtering ──────
-NGRAM_SIZE = 3
-
-def get_ngrams(text, n=NGRAM_SIZE):
-    """Extract character n-grams from text"""
-    return set(text[i:i+n] for i in range(len(text) - n + 1)) if len(text) >= n else {text}
-
-def build_ngram_index(corpus):
-    """Build inverted index: ngram -> set of corpus indices"""
-    index = defaultdict(set)
-    for i, entry in enumerate(corpus):
-        # Index both full text and text without Bismillah
-        for ng in get_ngrams(entry['text_normalized']):
-            index[ng].add(i)
-        no_bis = entry.get('text_no_bismillah', entry['text_normalized'])
-        if no_bis != entry['text_normalized']:
-            for ng in get_ngrams(no_bis):
-                index[ng].add(i)
-    return index
-
-def get_candidates(normalized, ngram_index, corpus, max_candidates=200):
-    """Use n-gram overlap to quickly find candidate ayahs"""
-    if len(normalized) < NGRAM_SIZE:
-        return list(range(len(corpus)))  # short text, check all
-    
-    query_ngrams = get_ngrams(normalized)
-    if not query_ngrams:
-        return list(range(len(corpus)))
-    
-    # Count ngram hits per corpus entry
-    hits = defaultdict(int)
-    for ng in query_ngrams:
-        for idx in ngram_index.get(ng, set()):
-            hits[idx] += 1
-    
-    # Sort by hits, take top candidates
-    ranked = sorted(hits.items(), key=lambda x: x[1], reverse=True)
-    return [idx for idx, _ in ranked[:max_candidates]]
-
-# ── Matching engine ─────────────────────────────────
-def find_ayah(transcription, corpus, ngram_index, top_k=TOP_K):
-    """Find the best matching ayah(s) for a transcription"""
-    normalized = normalize_arabic(transcription)
-    if not normalized:
-        return []
-    
-    # Get candidates via n-gram index (much faster than brute force)
-    candidates = get_candidates(normalized, ngram_index, corpus)
-    
-    results = []
-    for idx in candidates:
-        entry = corpus[idx]
-        # Try matching against both full text and text without Bismillah
-        variants = [entry['text_normalized']]
-        no_bis = entry.get('text_no_bismillah', entry['text_normalized'])
-        if no_bis != entry['text_normalized']:
-            variants.append(no_bis)
-
-        best_score = 0
-        for corpus_norm in variants:
-            if normalized == corpus_norm:
-                best_score = max(best_score, 1.0)
-                continue
-
-            if normalized in corpus_norm:
-                coverage = len(normalized) / max(len(corpus_norm), 1)
-                best_score = max(best_score, 0.7 + (0.3 * coverage))
-                continue
-            elif corpus_norm in normalized:
-                coverage = len(corpus_norm) / max(len(normalized), 1)
-                best_score = max(best_score, 0.6 + (0.3 * coverage))
-                continue
-
-            score = SequenceMatcher(None, normalized, corpus_norm).ratio()
-            best_score = max(best_score, score)
-
-        if best_score > 0.35:
-            results.append((best_score, entry))
-    
-    results.sort(key=lambda x: x[0], reverse=True)
-    return results[:top_k]
-
-# ── Multi-ayah detection ────────────────────────────
-def detect_multi_ayah(transcription, corpus, ngram_index):
-    """Detect if transcription spans multiple consecutive ayahs"""
-    normalized = normalize_arabic(transcription)
-    if not normalized or len(normalized) < 5:
-        return None
-
-    # Get top candidates from multiple surahs (not just best match)
-    single_matches = find_ayah(transcription, corpus, ngram_index, top_k=10)
-    if not single_matches:
-        return None
-
-    best_single_score = single_matches[0][0]
-    if best_single_score > 0.95:
-        return None  # Very strong single match, no need
-
-    # Collect unique (surah, ayah) starting points from top matches
-    seen_surahs = set()
-    search_points = []
-    for score, entry in single_matches:
-        key = entry['surah']
-        if key not in seen_surahs:
-            seen_surahs.add(key)
-            search_points.append(entry)
-        if len(search_points) >= 5:
-            break
-
-    # Build index for quick ayah lookup by (surah, ayah)
-    ayah_index = {}
-    for i, entry in enumerate(corpus):
-        ayah_index[(entry['surah'], entry['ayah'])] = (i, entry)
-
-    best_multi = None
-    best_multi_score = best_single_score
-
-    for anchor in search_points:
-        surah = anchor['surah']
-        ayah = anchor['ayah']
-
-        # Try a wider range of starting points around this match
-        for start_ayah in range(max(1, ayah - 3), ayah + 4):
-            for length in range(2, 6):  # 2-5 consecutive ayahs
-                ayahs_found = []
-                concat_parts = []
-                for a in range(start_ayah, start_ayah + length):
-                    lookup = ayah_index.get((surah, a))
-                    if lookup:
-                        _, entry = lookup
-                        concat_parts.append(entry.get('text_no_bismillah', entry['text_normalized']))
-                        ayahs_found.append(entry)
-                    else:
-                        break  # Gap in sequence, stop
-
-                if len(ayahs_found) < 2:
-                    continue
-
-                concat_norm = " ".join(concat_parts)
-                score = SequenceMatcher(None, normalized, concat_norm).ratio()
-
-                if score > best_multi_score:
-                    best_multi_score = score
-                    best_multi = ayahs_found
-
-    if best_multi and best_multi_score > best_single_score + 0.05:
-        return best_multi
-    return None
-
-# ── Tafsir fetching ─────────────────────────────────
-tafsir_cache = {}
-
-async def fetch_tafsir(surah: int, ayah: int) -> str:
-    """Fetch tafsir from AlQuran Cloud API (Ibn Kathir)"""
-    cache_key = f"{surah}:{ayah}"
-    if cache_key in tafsir_cache:
-        return tafsir_cache[cache_key]
-    
-    try:
-        async with httpx.AsyncClient(timeout=5) as client:
-            # Try Ibn Kathir English tafsir
-            r = await client.get(f"http://api.alquran.cloud/v1/ayah/{surah}:{ayah}/en.ibn-kathir")
-            if r.status_code == 200:
-                data = r.json()
-                if data.get('data') and data['data'].get('text'):
-                    tafsir_text = data['data']['text']
-                    # Truncate to reasonable length
-                    if len(tafsir_text) > 500:
-                        tafsir_text = tafsir_text[:497] + "..."
-                    tafsir_cache[cache_key] = tafsir_text
-                    return tafsir_text
-    except Exception:
-        pass
-    
-    return ""
-
-# ── Load model & corpus ────────────────────────────
-print("🔊 Quran Shazam v2 — Loading...")
-print(f"   Model: {MODEL_NAME}")
-
-t0 = time.time()
-
-# Try ONNX first for faster inference
-pipe = None
-if USE_ONNX:
-    try:
-        from optimum.onnxruntime import ORTModelForSpeechSeq2Seq
-        from transformers import WhisperProcessor, AutoConfig
-        import numpy as np
-        
-        if os.path.exists(ONNX_PATH):
-            print("   Loading cached ONNX model...")
-            ort_model = ORTModelForSpeechSeq2Seq.from_pretrained(ONNX_PATH)
-        else:
-            print("   Exporting to ONNX (one-time)...")
-            ort_model = ORTModelForSpeechSeq2Seq.from_pretrained(MODEL_NAME, export=True)
-            ort_model.save_pretrained(ONNX_PATH)
-            print(f"   Saved ONNX model to {ONNX_PATH}")
-        
-        ort_processor = WhisperProcessor.from_pretrained(MODEL_NAME)
-        
-        from transformers import pipeline as hf_pipeline
-        pipe = hf_pipeline(
-            "automatic-speech-recognition",
-            model=ort_model,
-            tokenizer=ort_processor.tokenizer,
-            feature_extractor=ort_processor.feature_extractor,
-            device="cpu"
-        )
-        print(f"   ✅ ONNX model loaded ({time.time()-t0:.1f}s) ⚡")
-    except Exception as e:
-        print(f"   ⚠️ ONNX failed ({e}), falling back to PyTorch")
-        pipe = None
-
-if pipe is None:
-    from transformers import pipeline as hf_pipeline
-    pipe = hf_pipeline("automatic-speech-recognition", model=MODEL_NAME, device="cpu")
-    print(f"   ✅ PyTorch model loaded ({time.time()-t0:.1f}s)")
-
-# Prefer enriched corpus if available, fall back to original
-_corpus_path = ENRICHED_CORPUS_PATH if os.path.exists(ENRICHED_CORPUS_PATH) else CORPUS_PATH
-with open(_corpus_path, 'r') as f:
-    corpus = json.load(f)
-print(f"   Corpus source: {os.path.basename(_corpus_path)}")
-
-# Ensure normalized text exists and strip Bismillah for matching
-for entry in corpus:
-    if 'text_normalized' not in entry:
-        entry['text_normalized'] = normalize_arabic(entry['text'])
-    entry['text_no_bismillah'] = strip_bismillah(entry['text_normalized'])
-
-print(f"   ✅ Corpus loaded ({len(corpus)} ayahs)")
-
-# Build n-gram index
-t1 = time.time()
-ngram_index = build_ngram_index(corpus)
-print(f"   ✅ N-gram index built ({len(ngram_index)} trigrams, {time.time()-t1:.2f}s)")
+engine = create_engine()
 print("   🚀 Ready!\n")
 
-# ── FastAPI app ─────────────────────────────────────
-app = FastAPI(title="Tarteel", description="Discover the Quran through recitation")
-
-# Mount static files
+app = FastAPI(
+    title="Tarteel",
+    description="Identify Quran recitations from audio. Supports batch upload and real-time streaming.",
+    version="2.0",
+)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-# Load surah intros if available
-surah_intros = {}
-if os.path.exists(SURAH_INTROS_PATH):
-    with open(SURAH_INTROS_PATH, 'r') as f:
-        surah_intros = json.load(f)
 
 @app.get("/", response_class=HTMLResponse)
 async def home():
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
-@app.post("/identify")
-async def identify_endpoint(audio: UploadFile = File(...)):
-    """Identify a Quran recitation from audio"""
-    t0 = time.time()
 
+# ── Batch identify ──────────────────────────────────
+
+@app.post("/identify", summary="Identify a Quran recitation",
+          description="Upload an audio file (MP3, WAV, OGG, M4A, WebM) and get the matching surah, ayah, translation, and tafsir.")
+async def identify_endpoint(audio: UploadFile = File(..., description="Audio file of a Quran recitation")):
     suffix = os.path.splitext(audio.filename or "audio.webm")[1] or ".webm"
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        content = await audio.read()
-        tmp.write(content)
+        tmp.write(await audio.read())
         tmp_path = tmp.name
-
     try:
-        result = pipe(tmp_path)
-        transcription = result['text'].strip()
-
-        if not transcription:
-            return {"error": "Could not transcribe audio. Try a clearer recording."}
-
-        # Single ayah matching
-        matches = find_ayah(transcription, corpus, ngram_index, top_k=3)
-
-        # Multi-ayah detection
-        multi_ayah_result = detect_multi_ayah(transcription, corpus, ngram_index)
-        multi_ayah_data = None
-        if multi_ayah_result:
-            multi_ayah_data = [
-                {
-                    "surah": e['surah'], "ayah": e['ayah'],
-                    "surah_name": e['surahName'], "surah_english": e['surahEnglish'],
-                    "text": e['text'], "translation": e['translation'],
-                }
-                for e in multi_ayah_result
-            ]
-
-        # Fetch tafsir for top match
-        match_results = []
-        for i, (score, entry) in enumerate(matches):
-            tafsir = ""
-            if i == 0:  # Only fetch tafsir for best match
-                tafsir = await fetch_tafsir(entry['surah'], entry['ayah'])
-            match_results.append({
-                "score": round(score, 4),
-                "surah": entry['surah'],
-                "ayah": entry['ayah'],
-                "surah_name": entry['surahName'],
-                "surah_english": entry['surahEnglish'],
-                "surah_meaning": entry['surahMeaning'],
-                "text": entry['text'],
-                "translation": entry['translation'],
-                "transliteration": entry.get('transliteration', ''),
-                "tafsir": tafsir,
-            })
-
-        elapsed = time.time() - t0
-        engine = "ONNX ⚡" if USE_ONNX else "PyTorch"
-
-        return {
-            "transcription": transcription,
-            "elapsed": elapsed,
-            "engine": engine,
-            "matches": match_results,
-            "multi_ayah": multi_ayah_data,
-        }
+        return await engine.identify(tmp_path)
     finally:
         os.unlink(tmp_path)
 
-# ── Verse context endpoint ─────────────────────────
-@app.get("/verse/{surah}/{ayah}/context")
+
+# ── WebSocket streaming ────────────────────────────
+
+def _detect_suffix(first_chunk: bytes) -> str:
+    header = first_chunk[:4] if first_chunk else b''
+    if header[:3] == b'ID3' or header[:2] in (b'\xff\xfb', b'\xff\xf3'):
+        return ".mp3"
+    if header == b'RIFF':
+        return ".wav"
+    if header == b'OggS':
+        return ".ogg"
+    return ".webm"
+
+
+@app.websocket("/ws/stream")
+async def stream_transcription(ws: WebSocket):
+    """
+    Real-time streaming transcription.
+
+    Client sends:  binary audio chunks, then JSON {"type": "stop"}
+    Server sends:  {"type": "partial", "text": "...", "new_words": "..."}
+                   {"type": "match", ...}
+    """
+    await ws.accept()
+
+    audio_chunks = []
+    audio_bytes = 0
+    prev_text = ""
+    lock = asyncio.Lock()
+
+    async def process_audio():
+        nonlocal prev_text
+        if not audio_chunks:
+            return
+        async with lock:
+            try:
+                suffix = _detect_suffix(audio_chunks[0])
+                with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+                    for chunk in audio_chunks:
+                        tmp.write(chunk)
+                    tmp_path = tmp.name
+
+                loop = asyncio.get_event_loop()
+                result = await loop.run_in_executor(None, engine.pipe, tmp_path)
+                text = result['text'].strip()
+                os.unlink(tmp_path)
+
+                if text and text != prev_text:
+                    prev_words = prev_text.split() if prev_text else []
+                    curr_words = text.split()
+                    new_words = " ".join(curr_words[len(prev_words):]) if len(curr_words) > len(prev_words) else text
+                    prev_text = text
+                    await ws.send_json({"type": "partial", "text": text, "new_words": new_words})
+            except Exception as e:
+                print(f"   Stream error: {e}")
+
+    async def send_match():
+        if not prev_text:
+            await ws.send_json({"type": "match", "transcription": "", "matches": [], "multi_ayah": None})
+            return
+        result = await engine.match_text(prev_text)
+        result["type"] = "match"
+        await ws.send_json(result)
+
+    process_task = None
+
+    try:
+        while True:
+            message = await ws.receive()
+
+            if message["type"] == "websocket.receive":
+                if "bytes" in message and message["bytes"]:
+                    audio_chunks.append(message["bytes"])
+                    audio_bytes += len(message["bytes"])
+                    if audio_bytes > 16000 and not lock.locked():
+                        process_task = asyncio.create_task(process_audio())
+
+                elif "text" in message and message["text"]:
+                    data = json.loads(message["text"])
+                    if data.get("type") == "stop":
+                        if process_task and not process_task.done():
+                            await process_task
+                        await process_audio()
+                        await send_match()
+                        break
+
+            elif message["type"] == "websocket.disconnect":
+                break
+
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        print(f"   WebSocket error: {e}")
+        try:
+            await ws.send_json({"type": "error", "message": str(e)})
+        except Exception:
+            pass
+
+
+# ── Verse context ───────────────────────────────────
+
+@app.get("/verse/{surah}/{ayah}/context", summary="Get verse with context",
+         description="Returns the verse, 2 verses before and after, surah intro, and Ibn Kathir tafsir.")
 async def verse_context(surah: int, ayah: int):
-    """Get verse with surrounding context and surah info"""
-    # Find the target verse
-    target = None
-    target_idx = None
-    for i, entry in enumerate(corpus):
-        if entry['surah'] == surah and entry['ayah'] == ayah:
-            target = entry
-            target_idx = i
-            break
-
-    if not target:
+    ctx = engine.get_verse_context(surah, ayah)
+    if not ctx:
         raise HTTPException(status_code=404, detail="Verse not found")
+    # Add tafsir (async, can't do in core synchronously)
+    tafsir = await engine.fetch_tafsir(surah, ayah)
+    ctx["verse"]["tafsir"] = tafsir
+    return ctx
 
-    # Get surrounding verses (2 before, 2 after) from same surah
-    before = []
-    after = []
-    for offset in [-2, -1]:
-        idx = target_idx + offset
-        if idx >= 0 and corpus[idx]['surah'] == surah:
-            e = corpus[idx]
-            before.append({
-                "surah": e['surah'], "ayah": e['ayah'],
-                "text": e['text'], "translation": e['translation'],
-            })
-    for offset in [1, 2]:
-        idx = target_idx + offset
-        if idx < len(corpus) and corpus[idx]['surah'] == surah:
-            e = corpus[idx]
-            after.append({
-                "surah": e['surah'], "ayah": e['ayah'],
-                "text": e['text'], "translation": e['translation'],
-            })
 
-    # Fetch tafsir for the target verse
-    tafsir = await fetch_tafsir(surah, ayah)
+# ── Health ──────────────────────────────────────────
 
-    # Surah info
-    surah_key = str(surah)
-    intro_data = surah_intros.get(surah_key, {})
-    surah_info = {
-        "name": target.get('surahName', ''),
-        "english": target.get('surahEnglish', ''),
-        "meaning": target.get('surahMeaning', ''),
-        "intro": intro_data.get('intro', ''),
-        "revelation": intro_data.get('revelation', ''),
-        "verse_count": intro_data.get('verse_count', 0),
-    }
-
-    return {
-        "verse": {
-            "surah": target['surah'], "ayah": target['ayah'],
-            "text": target['text'], "translation": target['translation'],
-            "transliteration": target.get('transliteration', ''),
-            "tafsir": tafsir,
-        },
-        "before": before,
-        "after": after,
-        "surah_info": surah_info,
-    }
-
-# Health check
-@app.get("/health")
+@app.get("/health", summary="Service health check")
 async def health():
-    return {"status": "ok", "model": MODEL_NAME, "corpus_size": len(corpus), "engine": "onnx" if USE_ONNX else "pytorch"}
+    return {
+        "status": "ok",
+        "model": engine.model_name,
+        "corpus_size": len(engine.corpus),
+        "engine": "onnx" if engine.use_onnx else "pytorch",
+    }
+
 
 if __name__ == "__main__":
     import uvicorn
