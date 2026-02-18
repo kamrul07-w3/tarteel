@@ -43,6 +43,16 @@ def normalize_arabic(text):
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
+# ── Bismillah handling ─────────────────────────────
+BISMILLAH_NORM = normalize_arabic("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ")
+
+def strip_bismillah(text):
+    """Strip Bismillah prefix from normalized text if present"""
+    if text.startswith(BISMILLAH_NORM):
+        stripped = text[len(BISMILLAH_NORM):].strip()
+        return stripped if stripped else text
+    return text
+
 # ── N-gram index for fast candidate filtering ──────
 NGRAM_SIZE = 3
 
@@ -54,8 +64,13 @@ def build_ngram_index(corpus):
     """Build inverted index: ngram -> set of corpus indices"""
     index = defaultdict(set)
     for i, entry in enumerate(corpus):
+        # Index both full text and text without Bismillah
         for ng in get_ngrams(entry['text_normalized']):
             index[ng].add(i)
+        no_bis = entry.get('text_no_bismillah', entry['text_normalized'])
+        if no_bis != entry['text_normalized']:
+            for ng in get_ngrams(no_bis):
+                index[ng].add(i)
     return index
 
 def get_candidates(normalized, ngram_index, corpus, max_candidates=200):
@@ -90,26 +105,32 @@ def find_ayah(transcription, corpus, ngram_index, top_k=TOP_K):
     results = []
     for idx in candidates:
         entry = corpus[idx]
-        corpus_norm = entry['text_normalized']
-        
-        if normalized == corpus_norm:
-            results.append((1.0, entry))
-            continue
-        
-        if normalized in corpus_norm:
-            coverage = len(normalized) / max(len(corpus_norm), 1)
-            score = 0.7 + (0.3 * coverage)
-            results.append((score, entry))
-            continue
-        elif corpus_norm in normalized:
-            coverage = len(corpus_norm) / max(len(normalized), 1)
-            score = 0.6 + (0.3 * coverage)
-            results.append((score, entry))
-            continue
-        
-        score = SequenceMatcher(None, normalized, corpus_norm).ratio()
-        if score > 0.35:
-            results.append((score, entry))
+        # Try matching against both full text and text without Bismillah
+        variants = [entry['text_normalized']]
+        no_bis = entry.get('text_no_bismillah', entry['text_normalized'])
+        if no_bis != entry['text_normalized']:
+            variants.append(no_bis)
+
+        best_score = 0
+        for corpus_norm in variants:
+            if normalized == corpus_norm:
+                best_score = max(best_score, 1.0)
+                continue
+
+            if normalized in corpus_norm:
+                coverage = len(normalized) / max(len(corpus_norm), 1)
+                best_score = max(best_score, 0.7 + (0.3 * coverage))
+                continue
+            elif corpus_norm in normalized:
+                coverage = len(corpus_norm) / max(len(normalized), 1)
+                best_score = max(best_score, 0.6 + (0.3 * coverage))
+                continue
+
+            score = SequenceMatcher(None, normalized, corpus_norm).ratio()
+            best_score = max(best_score, score)
+
+        if best_score > 0.35:
+            results.append((best_score, entry))
     
     results.sort(key=lambda x: x[0], reverse=True)
     return results[:top_k]
@@ -118,45 +139,66 @@ def find_ayah(transcription, corpus, ngram_index, top_k=TOP_K):
 def detect_multi_ayah(transcription, corpus, ngram_index):
     """Detect if transcription spans multiple consecutive ayahs"""
     normalized = normalize_arabic(transcription)
-    if not normalized or len(normalized) < 20:
+    if not normalized or len(normalized) < 5:
         return None
-    
-    # First find best single match
-    single_matches = find_ayah(transcription, corpus, ngram_index, top_k=1)
-    if not single_matches or single_matches[0][0] > 0.9:
-        return None  # Single ayah match is good enough
-    
-    best_score, best_entry = single_matches[0]
-    surah = best_entry['surah']
-    ayah = best_entry['ayah']
-    
-    # Try concatenating consecutive ayahs from same surah
+
+    # Get top candidates from multiple surahs (not just best match)
+    single_matches = find_ayah(transcription, corpus, ngram_index, top_k=10)
+    if not single_matches:
+        return None
+
+    best_single_score = single_matches[0][0]
+    if best_single_score > 0.95:
+        return None  # Very strong single match, no need
+
+    # Collect unique (surah, ayah) starting points from top matches
+    seen_surahs = set()
+    search_points = []
+    for score, entry in single_matches:
+        key = entry['surah']
+        if key not in seen_surahs:
+            seen_surahs.add(key)
+            search_points.append(entry)
+        if len(search_points) >= 5:
+            break
+
+    # Build index for quick ayah lookup by (surah, ayah)
+    ayah_index = {}
+    for i, entry in enumerate(corpus):
+        ayah_index[(entry['surah'], entry['ayah'])] = (i, entry)
+
     best_multi = None
-    best_multi_score = best_score
-    
-    for start_ayah in range(max(1, ayah - 2), ayah + 3):
-        for length in range(2, 6):  # Try 2-5 consecutive ayahs
-            concat_text = ""
-            ayahs_found = []
-            for a in range(start_ayah, start_ayah + length):
-                # Find this ayah in corpus
-                for entry in corpus:
-                    if entry['surah'] == surah and entry['ayah'] == a:
-                        concat_text += " " + entry['text_normalized']
+    best_multi_score = best_single_score
+
+    for anchor in search_points:
+        surah = anchor['surah']
+        ayah = anchor['ayah']
+
+        # Try a wider range of starting points around this match
+        for start_ayah in range(max(1, ayah - 3), ayah + 4):
+            for length in range(2, 6):  # 2-5 consecutive ayahs
+                ayahs_found = []
+                concat_parts = []
+                for a in range(start_ayah, start_ayah + length):
+                    lookup = ayah_index.get((surah, a))
+                    if lookup:
+                        _, entry = lookup
+                        concat_parts.append(entry.get('text_no_bismillah', entry['text_normalized']))
                         ayahs_found.append(entry)
-                        break
-            
-            if len(ayahs_found) < 2:
-                continue
-            
-            concat_norm = concat_text.strip()
-            score = SequenceMatcher(None, normalized, concat_norm).ratio()
-            
-            if score > best_multi_score:
-                best_multi_score = score
-                best_multi = ayahs_found
-    
-    if best_multi and best_multi_score > best_score + 0.1:
+                    else:
+                        break  # Gap in sequence, stop
+
+                if len(ayahs_found) < 2:
+                    continue
+
+                concat_norm = " ".join(concat_parts)
+                score = SequenceMatcher(None, normalized, concat_norm).ratio()
+
+                if score > best_multi_score:
+                    best_multi_score = score
+                    best_multi = ayahs_found
+
+    if best_multi and best_multi_score > best_single_score + 0.05:
         return best_multi
     return None
 
@@ -236,10 +278,11 @@ with open(_corpus_path, 'r') as f:
     corpus = json.load(f)
 print(f"   Corpus source: {os.path.basename(_corpus_path)}")
 
-# Ensure normalized text exists
+# Ensure normalized text exists and strip Bismillah for matching
 for entry in corpus:
     if 'text_normalized' not in entry:
         entry['text_normalized'] = normalize_arabic(entry['text'])
+    entry['text_no_bismillah'] = strip_bismillah(entry['text_normalized'])
 
 print(f"   ✅ Corpus loaded ({len(corpus)} ayahs)")
 
